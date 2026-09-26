@@ -25,6 +25,7 @@ class AiProvider {
   final ProviderType type;
   final String baseUrl;
   final String defaultModel;
+  final String? modelOverride; // user-picked model; null/empty = defaultModel
   final Map<String, String> extraHeaders;
   final bool enabled;
 
@@ -34,9 +35,16 @@ class AiProvider {
     required this.type,
     required this.baseUrl,
     required this.defaultModel,
+    this.modelOverride,
     this.extraHeaders = const {},
     this.enabled = true,
   });
+
+  /// The model id actually sent on requests.
+  String get resolvedModel =>
+      (modelOverride?.trim().isNotEmpty ?? false)
+          ? modelOverride!.trim()
+          : defaultModel;
 
   factory AiProvider.fromRow(Provider row) => AiProvider(
         id: row.id,
@@ -44,6 +52,7 @@ class AiProvider {
         type: ProviderType.fromId(row.type),
         baseUrl: row.baseUrl,
         defaultModel: row.defaultModel,
+        modelOverride: row.modelOverride,
         extraHeaders: decodeHeaders(row.extraHeaders),
         enabled: row.enabled,
       );
@@ -54,6 +63,7 @@ class AiProvider {
         type: Value(type.id),
         baseUrl: Value(baseUrl),
         defaultModel: Value(defaultModel),
+        modelOverride: Value(modelOverride),
         extraHeaders: Value(_encodeHeaders(extraHeaders)),
         enabled: Value(enabled),
       );
@@ -63,6 +73,7 @@ class AiProvider {
     ProviderType? type,
     String? baseUrl,
     String? defaultModel,
+    String? Function()? modelOverride,
     Map<String, String>? extraHeaders,
     bool? enabled,
   }) =>
@@ -72,6 +83,8 @@ class AiProvider {
         type: type ?? this.type,
         baseUrl: baseUrl ?? this.baseUrl,
         defaultModel: defaultModel ?? this.defaultModel,
+        modelOverride:
+            modelOverride != null ? modelOverride() : this.modelOverride,
         extraHeaders: extraHeaders ?? this.extraHeaders,
         enabled: enabled ?? this.enabled,
       );

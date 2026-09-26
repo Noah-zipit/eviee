@@ -290,6 +290,78 @@ class ChatService {
       return _dioError(e);
     }
   }
+
+  /// Fetch the provider's live model catalogue for the model picker.
+  /// Returns sorted model ids. Throws [ChatException] with a human message.
+  Future<List<String>> listModels({
+    required AiProvider provider,
+    required String apiKey,
+  }) async {
+    try {
+      switch (provider.type) {
+        case ProviderType.openaiCompatible:
+          final res = await _dio.get(
+            '${_trimSlash(provider.baseUrl)}/models',
+            options: Options(headers: {
+              'Authorization': 'Bearer $apiKey',
+              ...provider.extraHeaders,
+            }),
+          );
+          final data = res.data;
+          final items = data is Map
+              ? (data['data'] as List?) ?? const []
+              : const [];
+          final ids = items
+              .map((e) => (e is Map ? e['id'] : null)?.toString() ?? '')
+              .where((s) => s.isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort();
+          return ids;
+        case ProviderType.gemini:
+          final res = await _dio.get(
+            '${_trimSlash(provider.baseUrl)}/models',
+            queryParameters: {'key': apiKey, 'pageSize': 100},
+          );
+          final data = res.data;
+          final items = data is Map
+              ? (data['models'] as List?) ?? const []
+              : const [];
+          final ids = <String>{};
+          for (final e in items) {
+            if (e is! Map) continue;
+            final methods =
+                (e['supportedGenerationMethods'] as List?) ?? const [];
+            if (!methods.contains('generateContent')) continue;
+            final name = e['name']?.toString() ?? '';
+            if (name.startsWith('models/')) ids.add(name.substring(7));
+          }
+          final sorted = ids.toList()..sort();
+          return sorted;
+        case ProviderType.anthropic:
+          final res = await _dio.get(
+            'https://api.anthropic.com/v1/models',
+            options: Options(headers: {
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01',
+            }),
+          );
+          final data = res.data;
+          final items = data is Map
+              ? (data['data'] as List?) ?? const []
+              : const [];
+          final ids = items
+              .map((e) => (e is Map ? e['id'] : null)?.toString() ?? '')
+              .where((s) => s.isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort();
+          return ids;
+      }
+    } on DioException catch (e) {
+      throw ChatException(_dioError(e));
+    }
+  }
 }
 
 class ChatException implements Exception {

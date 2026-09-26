@@ -42,6 +42,8 @@ class Providers extends Table {
   TextColumn get type => text()(); // openai_compatible | gemini | anthropic
   TextColumn get baseUrl => text()();
   TextColumn get defaultModel => text().withDefault(const Constant(''))();
+  TextColumn get modelOverride =>
+      text().nullable()(); // user-picked model, null = use defaultModel
   TextColumn get extraHeaders =>
       text().withDefault(const Constant('{}'))(); // JSON map
   BoolColumn get enabled => boolean().withDefault(const Constant(true))();
@@ -70,7 +72,16 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            await m.addColumn(providers, providers.modelOverride);
+          }
+        },
+      );
 
   // ---------- conversations ----------
   Stream<List<Conversation>> watchConversations() =>

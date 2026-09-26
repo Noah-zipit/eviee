@@ -101,7 +101,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Text(
                     provider == null
                         ? 'add a provider to begin'
-                        : '${provider.name} · ${effectiveModel(provider, ref.watch(activeModelProvider))}',
+                        : '${provider.name} · ${provider.resolvedModel}',
                     style: monoStyle(t, size: 11.5),
                   ),
                   const SizedBox(height: 28),

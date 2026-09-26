@@ -59,11 +59,6 @@ final activeProviderProvider = Provider<AiProvider?>((ref) {
   return match.isEmpty ? enabled.first : match.first;
 });
 
-// Active model override per session (defaults to provider.defaultModel).
-final activeModelProvider = StateProvider<String?>((ref) => null);
-
-String effectiveModel(AiProvider p, String? override) =>
-    (override?.trim().isNotEmpty ?? false) ? override!.trim() : p.defaultModel;
 
 // ---------- theme ----------
 const _kThemePreset = 'theme_preset';

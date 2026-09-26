@@ -9,7 +9,9 @@ import 'package:markdown/markdown.dart' as md;
 import '../core/pricing.dart';
 import '../core/theme.dart';
 import '../history/conversations_drawer.dart';
+import '../providers/ai_provider.dart';
 import '../providers/app_providers.dart';
+import 'chat_service.dart';
 import 'chat_session.dart';
 
 /// Chat thread: streaming messages, markdown + code highlighting,
@@ -129,9 +131,7 @@ class _ProviderPill extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final provider = ref.watch(activeProviderProvider);
-    final model = provider == null
-        ? '—'
-        : effectiveModel(provider, ref.watch(activeModelProvider));
+    final model = provider == null ? '—' : provider.resolvedModel;
     return InkWell(
       borderRadius: BorderRadius.circular(999),
       onTap: () => _showPicker(context, ref),
@@ -173,34 +173,68 @@ class _ProviderPill extends ConsumerWidget {
     final enabled = ref.read(enabledProvidersProvider);
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: 20 + MediaQuery.of(ctx).viewInsets.bottom,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Provider', style: uiStyle(t, weight: FontWeight.w600)),
               const SizedBox(height: 12),
-              for (final p in enabled)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(p.name, style: uiStyle(t, size: 14.5)),
-                  subtitle: Text(p.defaultModel, style: monoStyle(t, size: 11)),
-                  trailing:
-                      ref.watch(activeProviderProvider)?.id == p.id
-                          ? Icon(Icons.check, color: t.accent)
-                          : null,
-                  onTap: () {
-                    ref.read(activeProviderIdProvider.notifier).set(p.id);
-                    ref.read(activeModelProvider.notifier).state = null;
-                    Navigator.pop(ctx);
-                  },
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final p in enabled)
+                        Builder(builder: (_) {
+                          final active =
+                              ref.watch(activeProviderProvider)?.id == p.id;
+                          final custom =
+                              (p.modelOverride?.trim().isNotEmpty ?? false);
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(p.name,
+                                style: uiStyle(t, size: 14.5)),
+                            subtitle: Text(
+                              custom
+                                  ? '${p.resolvedModel}  ·  custom'
+                                  : p.resolvedModel,
+                              style: monoStyle(t, size: 11),
+                            ),
+                            trailing: active
+                                ? Icon(Icons.check, color: t.accent)
+                                : null,
+                            onTap: () {
+                              ref
+                                  .read(activeProviderIdProvider.notifier)
+                                  .set(p.id);
+                            },
+                          );
+                        }),
+                    ],
+                  ),
                 ),
+              ),
               const SizedBox(height: 12),
-              Text('Model override', style: uiStyle(t, weight: FontWeight.w600)),
+              Text('Model', style: uiStyle(t, weight: FontWeight.w600)),
               const SizedBox(height: 8),
-              _ModelField(t: t),
+              _ModelSection(t: t),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Done'),
+                ),
+              ),
             ],
           ),
         ),
@@ -209,9 +243,199 @@ class _ProviderPill extends ConsumerWidget {
   }
 }
 
+/// Model picker for the active provider: live catalogue list + manual entry.
+/// The pick is saved per provider and survives restarts.
+class _ModelSection extends ConsumerWidget {
+  final EvieeTokens t;
+  const _ModelSection({required this.t});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final provider = ref.watch(activeProviderProvider);
+    if (provider == null) return const SizedBox.shrink();
+    final custom = provider.modelOverride?.trim().isNotEmpty ?? false;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _openModelList(context, ref, provider),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: t.muted,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: t.border),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        provider.resolvedModel,
+                        style: monoStyle(t, size: 13),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        custom
+                            ? 'custom pick — tap to change'
+                            : 'provider default — tap to choose from list',
+                        style: uiStyle(t, size: 11, color: t.foreground2),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.list, size: 18, color: t.foreground2),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _ModelField(key: ValueKey(provider.id), t: t, provider: provider),
+      ],
+    );
+  }
+
+  void _openModelList(
+      BuildContext context, WidgetRef ref, AiProvider provider) {
+    showDialog(
+      context: context,
+      builder: (dctx) => _ModelListDialog(t: t, provider: provider),
+    );
+  }
+}
+
+/// Live model catalogue for one provider, fetched with its saved API key.
+class _ModelListDialog extends ConsumerStatefulWidget {
+  final EvieeTokens t;
+  final AiProvider provider;
+  const _ModelListDialog({required this.t, required this.provider});
+
+  @override
+  ConsumerState<_ModelListDialog> createState() => _ModelListDialogState();
+}
+
+class _ModelListDialogState extends ConsumerState<_ModelListDialog> {
+  late Future<List<String>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<List<String>> _load() async {
+    final repo = ref.read(providerRepositoryProvider);
+    final key = await repo.readKey(widget.provider.id);
+    if (key == null || key.trim().isEmpty) {
+      throw ChatException(
+          'Save an API key for ${widget.provider.name} first.');
+    }
+    return ref
+        .read(chatServiceProvider)
+        .listModels(provider: widget.provider, apiKey: key);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.t;
+    final provider = widget.provider;
+    return AlertDialog(
+      title: Text('${provider.name} models', style: uiStyle(t, size: 16)),
+      content: SizedBox(
+        width: double.maxFinite,
+        height: 420,
+        child: FutureBuilder<List<String>>(
+          future: _future,
+          builder: (ctx, snap) {
+            if (snap.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snap.hasError) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      snap.error.toString(),
+                      style: uiStyle(t, size: 13, color: t.foreground2),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () => setState(() => _future = _load()),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
+            }
+            final models = snap.data ?? const <String>[];
+            if (models.isEmpty) {
+              return Center(
+                child: Text('No models returned.',
+                    style: uiStyle(t, size: 13, color: t.foreground2)),
+              );
+            }
+            final current = provider.resolvedModel;
+            return ListView(
+              shrinkWrap: true,
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('Use provider default',
+                      style: uiStyle(t, size: 13.5)),
+                  subtitle: Text(provider.defaultModel,
+                      style: monoStyle(t, size: 11)),
+                  trailing:
+                      (provider.modelOverride?.trim().isNotEmpty ?? false)
+                          ? null
+                          : Icon(Icons.check, color: t.accent),
+                  onTap: () async {
+                    await ref
+                        .read(providerRepositoryProvider)
+                        .setModelOverride(provider.id, null);
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                ),
+                const Divider(height: 8),
+                for (final m in models)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(m, style: monoStyle(t, size: 12.5)),
+                    trailing: current == m
+                        ? Icon(Icons.check, color: t.accent)
+                        : null,
+                    onTap: () async {
+                      await ref
+                          .read(providerRepositoryProvider)
+                          .setModelOverride(provider.id, m);
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ],
+    );
+  }
+}
+
 class _ModelField extends ConsumerStatefulWidget {
   final EvieeTokens t;
-  const _ModelField({required this.t});
+  final AiProvider provider;
+  const _ModelField({super.key, required this.t, required this.provider});
 
   @override
   ConsumerState<_ModelField> createState() => _ModelFieldState();
@@ -223,7 +447,7 @@ class _ModelFieldState extends ConsumerState<_ModelField> {
   @override
   void initState() {
     super.initState();
-    _c = TextEditingController(text: ref.read(activeModelProvider) ?? '');
+    _c = TextEditingController(text: widget.provider.modelOverride ?? '');
   }
 
   @override
@@ -237,11 +461,12 @@ class _ModelFieldState extends ConsumerState<_ModelField> {
     return TextField(
       controller: _c,
       style: monoStyle(widget.t, size: 13, color: widget.t.foreground),
-      decoration: const InputDecoration(hintText: 'leave empty for default'),
-      onSubmitted: (v) {
-        ref.read(activeModelProvider.notifier).state =
-            v.trim().isEmpty ? null : v.trim();
-        Navigator.pop(context);
+      decoration: const InputDecoration(
+          hintText: 'or type a model id manually, Enter to save'),
+      onSubmitted: (v) async {
+        await ref
+            .read(providerRepositoryProvider)
+            .setModelOverride(widget.provider.id, v);
       },
     );
   }

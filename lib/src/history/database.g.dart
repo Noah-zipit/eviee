@@ -814,6 +814,12 @@ class $ProvidersTable extends Providers
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant(''));
+  static const VerificationMeta _modelOverrideMeta =
+      const VerificationMeta('modelOverride');
+  @override
+  late final GeneratedColumn<String> modelOverride = GeneratedColumn<String>(
+      'model_override', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _extraHeadersMeta =
       const VerificationMeta('extraHeaders');
   @override
@@ -833,8 +839,16 @@ class $ProvidersTable extends Providers
           GeneratedColumn.constraintIsAlways('CHECK ("enabled" IN (0, 1))'),
       defaultValue: const Constant(true));
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, name, type, baseUrl, defaultModel, extraHeaders, enabled];
+  List<GeneratedColumn> get $columns => [
+        id,
+        name,
+        type,
+        baseUrl,
+        defaultModel,
+        modelOverride,
+        extraHeaders,
+        enabled
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -874,6 +888,12 @@ class $ProvidersTable extends Providers
           defaultModel.isAcceptableOrUnknown(
               data['default_model']!, _defaultModelMeta));
     }
+    if (data.containsKey('model_override')) {
+      context.handle(
+          _modelOverrideMeta,
+          modelOverride.isAcceptableOrUnknown(
+              data['model_override']!, _modelOverrideMeta));
+    }
     if (data.containsKey('extra_headers')) {
       context.handle(
           _extraHeadersMeta,
@@ -903,6 +923,8 @@ class $ProvidersTable extends Providers
           .read(DriftSqlType.string, data['${effectivePrefix}base_url'])!,
       defaultModel: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}default_model'])!,
+      modelOverride: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}model_override']),
       extraHeaders: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}extra_headers'])!,
       enabled: attachedDatabase.typeMapping
@@ -922,6 +944,7 @@ class Provider extends DataClass implements Insertable<Provider> {
   final String type;
   final String baseUrl;
   final String defaultModel;
+  final String? modelOverride;
   final String extraHeaders;
   final bool enabled;
   const Provider(
@@ -930,6 +953,7 @@ class Provider extends DataClass implements Insertable<Provider> {
       required this.type,
       required this.baseUrl,
       required this.defaultModel,
+      this.modelOverride,
       required this.extraHeaders,
       required this.enabled});
   @override
@@ -940,6 +964,9 @@ class Provider extends DataClass implements Insertable<Provider> {
     map['type'] = Variable<String>(type);
     map['base_url'] = Variable<String>(baseUrl);
     map['default_model'] = Variable<String>(defaultModel);
+    if (!nullToAbsent || modelOverride != null) {
+      map['model_override'] = Variable<String>(modelOverride);
+    }
     map['extra_headers'] = Variable<String>(extraHeaders);
     map['enabled'] = Variable<bool>(enabled);
     return map;
@@ -952,6 +979,9 @@ class Provider extends DataClass implements Insertable<Provider> {
       type: Value(type),
       baseUrl: Value(baseUrl),
       defaultModel: Value(defaultModel),
+      modelOverride: modelOverride == null && nullToAbsent
+          ? const Value.absent()
+          : Value(modelOverride),
       extraHeaders: Value(extraHeaders),
       enabled: Value(enabled),
     );
@@ -966,6 +996,7 @@ class Provider extends DataClass implements Insertable<Provider> {
       type: serializer.fromJson<String>(json['type']),
       baseUrl: serializer.fromJson<String>(json['baseUrl']),
       defaultModel: serializer.fromJson<String>(json['defaultModel']),
+      modelOverride: serializer.fromJson<String?>(json['modelOverride']),
       extraHeaders: serializer.fromJson<String>(json['extraHeaders']),
       enabled: serializer.fromJson<bool>(json['enabled']),
     );
@@ -979,6 +1010,7 @@ class Provider extends DataClass implements Insertable<Provider> {
       'type': serializer.toJson<String>(type),
       'baseUrl': serializer.toJson<String>(baseUrl),
       'defaultModel': serializer.toJson<String>(defaultModel),
+      'modelOverride': serializer.toJson<String?>(modelOverride),
       'extraHeaders': serializer.toJson<String>(extraHeaders),
       'enabled': serializer.toJson<bool>(enabled),
     };
@@ -990,6 +1022,7 @@ class Provider extends DataClass implements Insertable<Provider> {
           String? type,
           String? baseUrl,
           String? defaultModel,
+          Value<String?> modelOverride = const Value.absent(),
           String? extraHeaders,
           bool? enabled}) =>
       Provider(
@@ -998,6 +1031,8 @@ class Provider extends DataClass implements Insertable<Provider> {
         type: type ?? this.type,
         baseUrl: baseUrl ?? this.baseUrl,
         defaultModel: defaultModel ?? this.defaultModel,
+        modelOverride:
+            modelOverride.present ? modelOverride.value : this.modelOverride,
         extraHeaders: extraHeaders ?? this.extraHeaders,
         enabled: enabled ?? this.enabled,
       );
@@ -1010,6 +1045,9 @@ class Provider extends DataClass implements Insertable<Provider> {
       defaultModel: data.defaultModel.present
           ? data.defaultModel.value
           : this.defaultModel,
+      modelOverride: data.modelOverride.present
+          ? data.modelOverride.value
+          : this.modelOverride,
       extraHeaders: data.extraHeaders.present
           ? data.extraHeaders.value
           : this.extraHeaders,
@@ -1025,6 +1063,7 @@ class Provider extends DataClass implements Insertable<Provider> {
           ..write('type: $type, ')
           ..write('baseUrl: $baseUrl, ')
           ..write('defaultModel: $defaultModel, ')
+          ..write('modelOverride: $modelOverride, ')
           ..write('extraHeaders: $extraHeaders, ')
           ..write('enabled: $enabled')
           ..write(')'))
@@ -1032,8 +1071,8 @@ class Provider extends DataClass implements Insertable<Provider> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, type, baseUrl, defaultModel, extraHeaders, enabled);
+  int get hashCode => Object.hash(id, name, type, baseUrl, defaultModel,
+      modelOverride, extraHeaders, enabled);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1043,6 +1082,7 @@ class Provider extends DataClass implements Insertable<Provider> {
           other.type == this.type &&
           other.baseUrl == this.baseUrl &&
           other.defaultModel == this.defaultModel &&
+          other.modelOverride == this.modelOverride &&
           other.extraHeaders == this.extraHeaders &&
           other.enabled == this.enabled);
 }
@@ -1053,6 +1093,7 @@ class ProvidersCompanion extends UpdateCompanion<Provider> {
   final Value<String> type;
   final Value<String> baseUrl;
   final Value<String> defaultModel;
+  final Value<String?> modelOverride;
   final Value<String> extraHeaders;
   final Value<bool> enabled;
   final Value<int> rowid;
@@ -1062,6 +1103,7 @@ class ProvidersCompanion extends UpdateCompanion<Provider> {
     this.type = const Value.absent(),
     this.baseUrl = const Value.absent(),
     this.defaultModel = const Value.absent(),
+    this.modelOverride = const Value.absent(),
     this.extraHeaders = const Value.absent(),
     this.enabled = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1072,6 +1114,7 @@ class ProvidersCompanion extends UpdateCompanion<Provider> {
     required String type,
     required String baseUrl,
     this.defaultModel = const Value.absent(),
+    this.modelOverride = const Value.absent(),
     this.extraHeaders = const Value.absent(),
     this.enabled = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1085,6 +1128,7 @@ class ProvidersCompanion extends UpdateCompanion<Provider> {
     Expression<String>? type,
     Expression<String>? baseUrl,
     Expression<String>? defaultModel,
+    Expression<String>? modelOverride,
     Expression<String>? extraHeaders,
     Expression<bool>? enabled,
     Expression<int>? rowid,
@@ -1095,6 +1139,7 @@ class ProvidersCompanion extends UpdateCompanion<Provider> {
       if (type != null) 'type': type,
       if (baseUrl != null) 'base_url': baseUrl,
       if (defaultModel != null) 'default_model': defaultModel,
+      if (modelOverride != null) 'model_override': modelOverride,
       if (extraHeaders != null) 'extra_headers': extraHeaders,
       if (enabled != null) 'enabled': enabled,
       if (rowid != null) 'rowid': rowid,
@@ -1107,6 +1152,7 @@ class ProvidersCompanion extends UpdateCompanion<Provider> {
       Value<String>? type,
       Value<String>? baseUrl,
       Value<String>? defaultModel,
+      Value<String?>? modelOverride,
       Value<String>? extraHeaders,
       Value<bool>? enabled,
       Value<int>? rowid}) {
@@ -1116,6 +1162,7 @@ class ProvidersCompanion extends UpdateCompanion<Provider> {
       type: type ?? this.type,
       baseUrl: baseUrl ?? this.baseUrl,
       defaultModel: defaultModel ?? this.defaultModel,
+      modelOverride: modelOverride ?? this.modelOverride,
       extraHeaders: extraHeaders ?? this.extraHeaders,
       enabled: enabled ?? this.enabled,
       rowid: rowid ?? this.rowid,
@@ -1140,6 +1187,9 @@ class ProvidersCompanion extends UpdateCompanion<Provider> {
     if (defaultModel.present) {
       map['default_model'] = Variable<String>(defaultModel.value);
     }
+    if (modelOverride.present) {
+      map['model_override'] = Variable<String>(modelOverride.value);
+    }
     if (extraHeaders.present) {
       map['extra_headers'] = Variable<String>(extraHeaders.value);
     }
@@ -1160,6 +1210,7 @@ class ProvidersCompanion extends UpdateCompanion<Provider> {
           ..write('type: $type, ')
           ..write('baseUrl: $baseUrl, ')
           ..write('defaultModel: $defaultModel, ')
+          ..write('modelOverride: $modelOverride, ')
           ..write('extraHeaders: $extraHeaders, ')
           ..write('enabled: $enabled, ')
           ..write('rowid: $rowid')
@@ -1975,6 +2026,7 @@ typedef $$ProvidersTableCreateCompanionBuilder = ProvidersCompanion Function({
   required String type,
   required String baseUrl,
   Value<String> defaultModel,
+  Value<String?> modelOverride,
   Value<String> extraHeaders,
   Value<bool> enabled,
   Value<int> rowid,
@@ -1985,6 +2037,7 @@ typedef $$ProvidersTableUpdateCompanionBuilder = ProvidersCompanion Function({
   Value<String> type,
   Value<String> baseUrl,
   Value<String> defaultModel,
+  Value<String?> modelOverride,
   Value<String> extraHeaders,
   Value<bool> enabled,
   Value<int> rowid,
@@ -2013,6 +2066,9 @@ class $$ProvidersTableFilterComposer
 
   ColumnFilters<String> get defaultModel => $composableBuilder(
       column: $table.defaultModel, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get modelOverride => $composableBuilder(
+      column: $table.modelOverride, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get extraHeaders => $composableBuilder(
       column: $table.extraHeaders, builder: (column) => ColumnFilters(column));
@@ -2046,6 +2102,10 @@ class $$ProvidersTableOrderingComposer
       column: $table.defaultModel,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get modelOverride => $composableBuilder(
+      column: $table.modelOverride,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get extraHeaders => $composableBuilder(
       column: $table.extraHeaders,
       builder: (column) => ColumnOrderings(column));
@@ -2077,6 +2137,9 @@ class $$ProvidersTableAnnotationComposer
 
   GeneratedColumn<String> get defaultModel => $composableBuilder(
       column: $table.defaultModel, builder: (column) => column);
+
+  GeneratedColumn<String> get modelOverride => $composableBuilder(
+      column: $table.modelOverride, builder: (column) => column);
 
   GeneratedColumn<String> get extraHeaders => $composableBuilder(
       column: $table.extraHeaders, builder: (column) => column);
@@ -2113,6 +2176,7 @@ class $$ProvidersTableTableManager extends RootTableManager<
             Value<String> type = const Value.absent(),
             Value<String> baseUrl = const Value.absent(),
             Value<String> defaultModel = const Value.absent(),
+            Value<String?> modelOverride = const Value.absent(),
             Value<String> extraHeaders = const Value.absent(),
             Value<bool> enabled = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -2123,6 +2187,7 @@ class $$ProvidersTableTableManager extends RootTableManager<
             type: type,
             baseUrl: baseUrl,
             defaultModel: defaultModel,
+            modelOverride: modelOverride,
             extraHeaders: extraHeaders,
             enabled: enabled,
             rowid: rowid,
@@ -2133,6 +2198,7 @@ class $$ProvidersTableTableManager extends RootTableManager<
             required String type,
             required String baseUrl,
             Value<String> defaultModel = const Value.absent(),
+            Value<String?> modelOverride = const Value.absent(),
             Value<String> extraHeaders = const Value.absent(),
             Value<bool> enabled = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -2143,6 +2209,7 @@ class $$ProvidersTableTableManager extends RootTableManager<
             type: type,
             baseUrl: baseUrl,
             defaultModel: defaultModel,
+            modelOverride: modelOverride,
             extraHeaders: extraHeaders,
             enabled: enabled,
             rowid: rowid,

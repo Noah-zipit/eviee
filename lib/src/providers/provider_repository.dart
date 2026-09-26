@@ -40,6 +40,16 @@ class ProviderRepository {
     if (p != null) await save(p.copyWith(enabled: enabled));
   }
 
+  /// Persist the user's chosen model for a provider. Null clears it back to
+  /// the provider default.
+  Future<void> setModelOverride(String id, String? model) async {
+    final p = await get(id);
+    if (p == null) return;
+    final clean = model?.trim();
+    await save(p.copyWith(
+        modelOverride: () => (clean == null || clean.isEmpty) ? null : clean));
+  }
+
   Future<String?> readKey(String providerId) =>
       _secure.read(key: keyName(providerId));
 

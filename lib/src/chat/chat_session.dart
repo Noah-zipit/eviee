@@ -144,8 +144,7 @@ class ChatSession extends StateNotifier<ChatSessionState> {
       state = state.copyWith(error: 'No API key saved for ${provider.name}.');
       return;
     }
-    final model = effectiveModel(
-        provider, ref.read(activeModelProvider));
+    final model = provider.resolvedModel;
 
     // Ensure a conversation row exists.
     var convId = state.conversationId;
