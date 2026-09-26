@@ -50,12 +50,21 @@ class ProviderRepository {
     return k != null && k.trim().isNotEmpty;
   }
 
-  /// Seed the six built-in presets on first run (no keys).
+  /// Seed the built-in presets on first run (no keys). Also backfills any
+  /// presets added in later app versions for existing installs.
   Future<void> seedPresetsIfEmpty() async {
     final existing = await db.allProviders();
-    if (existing.isNotEmpty) return;
+    if (existing.isEmpty) {
+      for (final p in _presets) {
+        await db.upsertProvider(p.toCompanion());
+      }
+      return;
+    }
+    final ids = existing.map((r) => r.id).toSet();
     for (final p in _presets) {
-      await db.upsertProvider(p.toCompanion());
+      if (!ids.contains(p.id)) {
+        await db.upsertProvider(p.toCompanion());
+      }
     }
   }
 
@@ -90,6 +99,13 @@ class ProviderRepository {
       type: ProviderType.openaiCompatible,
       baseUrl: 'https://api.deepseek.com/v1',
       defaultModel: 'deepseek-chat',
+    ),
+    const AiProvider(
+      id: 'preset-nvidia-nim',
+      name: 'NVIDIA NIM',
+      type: ProviderType.openaiCompatible,
+      baseUrl: 'https://integrate.api.nvidia.com/v1',
+      defaultModel: 'deepseek-ai/deepseek-v4-flash-0731',
     ),
     const AiProvider(
       id: 'preset-gemini',

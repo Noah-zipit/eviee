@@ -21,6 +21,7 @@ const Map<String, ModelPrice> modelPricing = {
   'gemini-1.5-flash': ModelPrice(0.075, 0.30),
   'deepseek-chat': ModelPrice(0.27, 1.10),
   'deepseek-reasoner': ModelPrice(0.55, 2.19),
+  'deepseek-v4-flash': ModelPrice(0.44, 1.32), // NVIDIA NIM listing, Sep 2026
   'llama-3.3-70b-versatile': ModelPrice(0.59, 0.79),
   'llama-3.1-8b-instant': ModelPrice(0.05, 0.08),
 };
