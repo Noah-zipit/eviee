@@ -1,0 +1,51 @@
+name: eviee
+description: eviee — your keys, your models, your data. BYOK AI chat.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.6.1
+  drift: ^2.28.1
+  sqlite3_flutter_libs: ^0.5.42
+  path: ^1.9.1
+  path_provider: ^2.1.5
+  flutter_secure_storage: ^9.2.4
+  dio: ^5.9.0
+  flutter_markdown: ^0.7.7
+  markdown: ^7.3.1
+  flutter_highlighter: ^0.1.1
+  tiktoken_tokenizer_gpt4o_o1: ^1.2.1
+  google_fonts: ^6.3.1
+  intl: ^0.20.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  drift_dev: ^2.28.1
+  build_runner: ^2.4.15
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.6
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/logo/eviee-mark.webp
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo/eviee-launcher-1024.png"
+  adaptive_icon_background: "#050507"
+  adaptive_icon_foreground: "assets/logo/eviee-launcher-1024.png"
+
+flutter_native_splash:
+  color: "#050507"
+  image: assets/logo/eviee-launcher-1024.png
+  android: true
+  ios: true

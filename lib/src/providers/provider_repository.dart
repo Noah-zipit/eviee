@@ -1,0 +1,109 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import '../history/database.dart';
+import 'ai_provider.dart';
+
+/// CRUD for providers + presets. API keys are stored ONLY in secure storage,
+/// keyed by provider id. Keys are never written to Drift and never logged.
+class ProviderRepository {
+  final AppDatabase db;
+  final FlutterSecureStorage _secure = const FlutterSecureStorage();
+
+  ProviderRepository(this.db);
+
+  static String keyName(String providerId) => 'eviee_key_$providerId';
+
+  Stream<List<AiProvider>> watchAll() =>
+      db.watchProviders().map((rows) => rows.map(AiProvider.fromRow).toList());
+
+  Future<List<AiProvider>> all() async =>
+      (await db.allProviders()).map(AiProvider.fromRow).toList();
+
+  Future<List<AiProvider>> enabled() async =>
+      (await all()).where((p) => p.enabled).toList();
+
+  Future<AiProvider?> get(String id) async {
+    final row = await db.getProvider(id);
+    return row == null ? null : AiProvider.fromRow(row);
+  }
+
+  Future<void> save(AiProvider p) => db.upsertProvider(p.toCompanion());
+
+  Future<void> delete(String id) async {
+    await db.deleteProvider(id);
+    await _secure.delete(key: keyName(id));
+  }
+
+  Future<void> setEnabled(String id, bool enabled) async {
+    final p = await get(id);
+    if (p != null) await save(p.copyWith(enabled: enabled));
+  }
+
+  Future<String?> readKey(String providerId) =>
+      _secure.read(key: keyName(providerId));
+
+  Future<void> writeKey(String providerId, String key) =>
+      _secure.write(key: keyName(providerId), value: key);
+
+  Future<bool> hasKey(String providerId) async {
+    final k = await readKey(providerId);
+    return k != null && k.trim().isNotEmpty;
+  }
+
+  /// Seed the six built-in presets on first run (no keys).
+  Future<void> seedPresetsIfEmpty() async {
+    final existing = await db.allProviders();
+    if (existing.isNotEmpty) return;
+    for (final p in _presets) {
+      await db.upsertProvider(p.toCompanion());
+    }
+  }
+
+  static String newId() =>
+      'p_${DateTime.now().millisecondsSinceEpoch}';
+
+  static final List<AiProvider> _presets = [
+    const AiProvider(
+      id: 'preset-openai',
+      name: 'OpenAI',
+      type: ProviderType.openaiCompatible,
+      baseUrl: 'https://api.openai.com/v1',
+      defaultModel: 'gpt-4o-mini',
+    ),
+    const AiProvider(
+      id: 'preset-groq',
+      name: 'Groq',
+      type: ProviderType.openaiCompatible,
+      baseUrl: 'https://api.groq.com/openai/v1',
+      defaultModel: 'llama-3.3-70b-versatile',
+    ),
+    const AiProvider(
+      id: 'preset-openrouter',
+      name: 'OpenRouter',
+      type: ProviderType.openaiCompatible,
+      baseUrl: 'https://openrouter.ai/api/v1',
+      defaultModel: 'openrouter/auto',
+    ),
+    const AiProvider(
+      id: 'preset-deepseek',
+      name: 'DeepSeek',
+      type: ProviderType.openaiCompatible,
+      baseUrl: 'https://api.deepseek.com/v1',
+      defaultModel: 'deepseek-chat',
+    ),
+    const AiProvider(
+      id: 'preset-gemini',
+      name: 'Gemini',
+      type: ProviderType.gemini,
+      baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+      defaultModel: 'gemini-2.5-flash',
+    ),
+    const AiProvider(
+      id: 'preset-anthropic',
+      name: 'Anthropic',
+      type: ProviderType.anthropic,
+      baseUrl: 'https://api.anthropic.com/v1',
+      defaultModel: 'claude-sonnet-4-20250514',
+    ),
+  ];
+}
