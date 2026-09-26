@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../history/database.dart';
@@ -66,6 +67,18 @@ class ProviderRepository {
         await db.upsertProvider(p.toCompanion());
       }
     }
+    // Migrate installs seeded with a retired model id.
+    for (final r in existing) {
+      if (r.id == 'preset-nvidia-nim' &&
+          r.defaultModel == 'deepseek-ai/deepseek-v4-flash-0731') {
+        await db.upsertProvider(
+          ProvidersCompanion(
+            id: const Value('preset-nvidia-nim'),
+            defaultModel: const Value('deepseek-ai/deepseek-v4.1-flash'),
+          ),
+        );
+      }
+    }
   }
 
   static String newId() =>
@@ -105,7 +118,7 @@ class ProviderRepository {
       name: 'NVIDIA NIM',
       type: ProviderType.openaiCompatible,
       baseUrl: 'https://integrate.api.nvidia.com/v1',
-      defaultModel: 'deepseek-ai/deepseek-v4-flash-0731',
+      defaultModel: 'deepseek-ai/deepseek-v4.1-flash',
     ),
     const AiProvider(
       id: 'preset-gemini',
