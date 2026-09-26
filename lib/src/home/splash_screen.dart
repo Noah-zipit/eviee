@@ -64,12 +64,13 @@ class _SplashScreenState extends State<SplashScreen>
             opacity: _fade.value,
             child: Transform.scale(
               scale: _scale.value,
-              child: SizedBox(
-                width: 168,
-                height: 168,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
+              child: ClipOval(
+                child: SizedBox(
+                  width: 168,
+                  height: 168,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
                     Image.asset(
                       'assets/logo/eviee-mark.webp',
                       fit: BoxFit.contain,
@@ -106,6 +107,7 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ],
                 ),
+              ),
               ),
             ),
           ),
