@@ -27,7 +27,7 @@
 
 ## 📲 Install
 
-Grab the APK from the [**latest release**](https://github.com/Noah-zipit/eviee-flutter/releases/latest):
+Grab the APK from the [**latest release**](https://github.com/Noah-zipit/eviee/releases/latest):
 
 | APK | For |
 |---|---|
