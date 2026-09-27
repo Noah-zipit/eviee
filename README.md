@@ -44,6 +44,15 @@ Enable *Install unknown apps* for your browser when prompted, then open the APK.
 3. Pick a model from the live catalogue (or type a model id manually)
 4. Start chatting
 
+## 🔑 Free API keys
+
+eviee is bring-your-own-key — no account needed in the app itself. Grab a free key from either of these, paste it into the matching provider preset, and you're chatting:
+
+- **NVIDIA NIM** — [build.nvidia.com](https://build.nvidia.com/) → sign in with a free NVIDIA account → generate an API key. The NVIDIA NIM preset already points at `https://integrate.api.nvidia.com/v1`.
+- **Groq** — [console.groq.com/keys](https://console.groq.com/keys) → free signup → *Create API Key*. The Groq preset already points at `https://api.groq.com/openai/v1`.
+
+Both have generous free tiers. Keys live only in your device's secure storage — never anywhere else.
+
 ## 🛠 Build from source
 
 ```bash
