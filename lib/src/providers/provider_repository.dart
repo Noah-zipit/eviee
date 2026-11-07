@@ -117,6 +117,13 @@ class ProviderRepository {
       defaultModel: 'openrouter/auto',
     ),
     const AiProvider(
+      id: 'preset-demonroute',
+      name: 'Demon Route',
+      type: ProviderType.openaiCompatible,
+      baseUrl: 'https://api.demonroute.com/v1',
+      defaultModel: 'dphn/Dolphin-Mistral-24B-Venice-Edition',
+    ),
+    const AiProvider(
       id: 'preset-deepseek',
       name: 'DeepSeek',
       type: ProviderType.openaiCompatible,
